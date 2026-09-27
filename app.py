@@ -43,7 +43,7 @@ def init_state():
     if "config" not in st.session_state:
         st.session_state.config = AppConfig()
     if "price_history" not in st.session_state:
-        st.session_state.price_history = []   # list of (timestamp_ms, price)
+        st.session_state.price_history = []    # list of (timestamp_ms, price)
     if "trade_log" not in st.session_state:
         st.session_state.trade_log = []        # list of dicts
     if "position_open" not in st.session_state:
@@ -86,7 +86,7 @@ with st.sidebar:
     cfg.risk.take_profit_pct = st.slider("Take-Profit (%)", 0.5, 30.0, cfg.risk.take_profit_pct, 0.5)
     cfg.risk.max_daily_loss_pct = st.slider("Max Daily Loss (%)", 1.0, 20.0, cfg.risk.max_daily_loss_pct, 0.5)
     cfg.risk.position_size_usd = st.number_input("Position Size (USD)", 100.0, 1_000_000.0,
-                                                  cfg.risk.position_size_usd, 100.0)
+                                                 cfg.risk.position_size_usd, 100.0)
 
     # Keep the risk manager's live thresholds in sync with the sidebar.
     rm.stop_loss_pct = cfg.risk.stop_loss_pct
@@ -114,7 +114,9 @@ with st.sidebar:
     st.markdown("---")
     if not st.session_state.position_open:
         open_clicked = st.button("▲ Open Position", use_container_width=True)
+        close_clicked = False
     else:
+        open_clicked = False
         close_clicked = st.button("■ Close Position", use_container_width=True)
 
 
@@ -170,7 +172,7 @@ decision = engine.analyze(prices_only)
 # --------------------------------------------------------------------------
 # Handle sidebar position actions
 # --------------------------------------------------------------------------
-if not st.session_state.position_open and "open_clicked" in dir() and open_clicked:
+if not st.session_state.position_open and open_clicked:
     rm.open_position(current_price)
     st.session_state.position_open = True
     st.session_state.trade_log.append({
@@ -180,7 +182,7 @@ if not st.session_state.position_open and "open_clicked" in dir() and open_click
         "pnl_pct": None,
     })
 
-if st.session_state.position_open and "close_clicked" in dir() and close_clicked:
+if st.session_state.position_open and close_clicked:
     risk_state_now = rm.evaluate(current_price)
     rm.register_close(risk_state_now.pnl_pct)
     st.session_state.position_open = False
@@ -287,13 +289,13 @@ with chart_col:
     ))
     if rm.entry_price is not None:
         fig.add_hline(y=rm.entry_price, line_dash="dot", line_color=cfg.theme.text_muted,
-                       annotation_text="Entry", annotation_font_color=cfg.theme.text_muted)
+                      annotation_text="Entry", annotation_font_color=cfg.theme.text_muted)
         fig.add_hline(y=rm.entry_price * (1 - cfg.risk.stop_loss_pct / 100),
-                       line_dash="dash", line_color=cfg.theme.crimson,
-                       annotation_text="Stop-Loss", annotation_font_color=cfg.theme.crimson)
+                      line_dash="dash", line_color=cfg.theme.crimson,
+                      annotation_text="Stop-Loss", annotation_font_color=cfg.theme.crimson)
         fig.add_hline(y=rm.entry_price * (1 + cfg.risk.take_profit_pct / 100),
-                       line_dash="dash", line_color=cfg.theme.emerald,
-                       annotation_text="Take-Profit", annotation_font_color=cfg.theme.emerald)
+                      line_dash="dash", line_color=cfg.theme.emerald,
+                      annotation_text="Take-Profit", annotation_font_color=cfg.theme.emerald)
 
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
@@ -345,7 +347,7 @@ with r3:
 status_color = {
     "NONE": "glow-emerald", "STOP_LOSS": "glow-crimson",
     "TAKE_PROFIT": "glow-emerald", "DAILY_LIMIT": "glow-crimson",
-}[risk_state.action]
+}[risk_action := risk_state.action]
 st.markdown(f'<div class="{status_color}" style="margin-top:8px;">● {risk_state.message}</div>',
             unsafe_allow_html=True)
 
@@ -371,3 +373,5 @@ else:
 if auto_refresh:
     time.sleep(cfg.market.poll_interval_sec)
     st.rerun()
+
+
